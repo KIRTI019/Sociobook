@@ -8,7 +8,16 @@ const HomePage = () => {
   const { _id, picturePath } = useSelector((state) => state.user);
 
   return (
-    <Box>
+    <Box sx={{ display: "flex" }}>
+      <Box
+        sx={{
+          width: isNonMobileScreens ? "20%" : "",
+          height: "100%",
+          display: isNonMobileScreens ? "" : "none",
+        }}
+      >
+        <Sidebar />
+      </Box>
       <Box sx={{ m: isNonMobileScreens ? "5% 0 0 20%" : "" }}>
         <PostsWidget userId={_id} isProfile={false} />
       </Box>
