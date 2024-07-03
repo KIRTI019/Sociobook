@@ -15,16 +15,6 @@ function App() {
     <BrowserRouter>
       <ThemeProvider theme={themeConfigs.custom({ themeMode })}>
         <CssBaseline />
-        <Box sx={{ display: "flex" }}>
-          <Box
-            sx={{
-              width: isNonMobileScreens ? "20%" : "",
-              height: "100%",
-              display: isNonMobileScreens ? "" : "none",
-            }}
-          >
-            <Sidebar />
-          </Box>
           <Routes>
             <Route path="/" element={<LoginPage />} />
             {routes.map((menu, index) => (
