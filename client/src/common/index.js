@@ -1,1 +1,1 @@
-export const backendDomain = "http://localhost:3001";
+export const backendDomain = "https://sociobook-backend.vercel.app";
