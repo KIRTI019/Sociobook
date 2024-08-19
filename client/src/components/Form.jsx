@@ -23,7 +23,7 @@ const registerSchema = yup.object().shape({
   displayName: yup.string().required("required"),
   email: yup.string().email("invalid email").required("required"),
   password: yup.string().required("required"),
-  picture: yup.mixed().required("required"),
+  picture: yup.mixed(),
 });
 
 const loginSchema = yup.object().shape({
