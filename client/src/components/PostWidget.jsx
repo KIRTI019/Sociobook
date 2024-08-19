@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
@@ -14,32 +14,40 @@ import { setPost } from "../redux/authSlice";
 import { backendDomain } from "../common/index";
 import PostInformation from "./PostInformation";
 
-const PostWidget = ({ post, width}) => {
+const PostWidget = ({ post, width }) => {
   const isNonMobileScreens = useMediaQuery("(min-width: 850px)");
   const [isComments, setIsComments] = useState(false);
   const [commentValue, setCommentValue] = useState("");
   const dispatch = useDispatch();
   const token = useSelector((state) => state.token);
-  const loggedInUserId = useSelector((state) => state.user._id);
-  const isLiked = Boolean(post.likes[loggedInUserId]);
-  const likeCount = Object.keys(post.likes).length;
-  const commentCount = Object.keys(post.comments).length;
+  const user = useSelector((state) => state.user);
+
+  // Track local state for likes and comments
+  const [localPost, setLocalPost] = useState(post);
+
+  useEffect(() => {
+    setLocalPost(post);
+  }, [post]);
 
   const patchLike = async () => {
-    const response = await fetch(`${backendDomain}/posts/${post._id}/like`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ userId: loggedInUserId }),
-    });
-    const updatedPost = await response.json();
-    dispatch(setPost({ posts: updatedPost }));
+      const response = await fetch(
+        `${backendDomain}/posts/${localPost._id}/like`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId: user._id }),
+        }
+      );
+      const updatedPost = await response.json();
+      dispatch(setPost({ posts: updatedPost }));
+      setLocalPost(updatedPost); 
   };
 
   const commentOnPost = async () => {
-    const response = await fetch(`${backendDomain}/posts/${post._id}`, {
+    const response = await fetch(`${backendDomain}/posts/${localPost._id}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -47,9 +55,17 @@ const PostWidget = ({ post, width}) => {
       },
       body: JSON.stringify({ comment: commentValue }),
     });
+    if (!response.ok) {
+      throw new Error("Failed to comment on the post");
+    }
     const updatedPost = await response.json();
     dispatch(setPost({ posts: updatedPost }));
-  }
+    setLocalPost(updatedPost);
+  };
+
+  const isLiked = Boolean(localPost.likes[user._id]);
+  const likeCount = Object.keys(localPost.likes).length;
+  const commentCount = Object.keys(localPost.comments).length;
 
   const changeComment = (e) => {
     setCommentValue(e.target.value);
@@ -58,19 +74,21 @@ const PostWidget = ({ post, width}) => {
   return (
     <Box
       sx={{
-        width: {width},
+        width: { width },
         mb: 2,
       }}
     >
-      <PostInformation post={post} />
+      <PostInformation post={localPost} />
       <Box sx={{ mt: isNonMobileScreens ? "3%" : "5%" }}>
-        <Typography sx={{ mr: isNonMobileScreens ? "10%" : "" }}>{post.description}</Typography>
-        {post.picturePath && (
-            <img
-            alt={post.displayName}
+        <Typography sx={{ mr: isNonMobileScreens ? "10%" : "" }}>
+          {localPost.description}
+        </Typography>
+        {localPost.picturePath && (
+          <img
+            alt={localPost.displayName}
             width="100%"
             height={isNonMobileScreens ? "450px" : "300px"}
-            src={post.picturePath}
+            src={localPost.picturePath}
           />
         )}
       </Box>
@@ -110,9 +128,10 @@ const PostWidget = ({ post, width}) => {
         sx={{ m: "0 0 2% 2%" }}
       />
 
-      {isComments && post.comments.map((item, index) => (
-        <Typography key={index}>{item}</Typography>
-      ))}
+      {isComments &&
+        localPost.comments.map((item, index) => (
+          <Typography key={index}>{item}</Typography>
+        ))}
     </Box>
   );
 };
