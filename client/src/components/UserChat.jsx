@@ -8,11 +8,7 @@ import Dropzone from "react-dropzone";
 import uploadImageToCloudinary from "../helper/uploadImage.js";
 import InsertPhotoOutlinedIcon from "@mui/icons-material/InsertPhotoOutlined";
 import SendIcon from "@mui/icons-material/Send";
-import io from "socket.io-client";
 import Message from "./Message.jsx";
-
-// Initialize the socket connection
-const socket = io(backendDomain);
 
 const UserChat = ({ friend }) => {
   const [messages, setMessages] = useState([]);
@@ -24,6 +20,7 @@ const UserChat = ({ friend }) => {
 
   const fetchMessages = async () => {
     try {
+      const lastMessageTime = messages.length > 0 ? messages[messages.length - 1].createdAt : null;
       const response = await fetch(`${backendDomain}/message`, {
         method: "POST",
         headers: {
@@ -31,11 +28,14 @@ const UserChat = ({ friend }) => {
         },
         body: JSON.stringify({
           senderId: user._id,
-          receiverId: friend._id,  
+          receiverId: friend._id,
+          lastMessageTime,  // Optional: Fetch only new messages
         }),
       });
       const data = await response.json();
-      setMessages(data);
+      setMessages((prevMessages) =>
+        Array.isArray(prevMessages) ? [...prevMessages, ...data] : data
+      );
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
@@ -64,8 +64,6 @@ const UserChat = ({ friend }) => {
 
       const data = await response.json();
 
-      socket.emit("new message", data);
-
       setMessages((prevMessages) =>
         Array.isArray(prevMessages) ? [...prevMessages, data] : [data]
       );
@@ -79,21 +77,12 @@ const UserChat = ({ friend }) => {
 
   useEffect(() => {
     if (friend) {
-      fetchMessages();
-      socket.emit("join chat", friend._id); 
+      fetchMessages(); // Fetch initial messages
+      const intervalId = setInterval(fetchMessages, 2000); // Polling every 2 seconds
+
+      return () => clearInterval(intervalId); // Clear the interval when the component unmounts
     }
-
-    socket.on("message received", (newMessageReceived) => {
-      setMessages((prevMessages) =>
-        Array.isArray(prevMessages) ? [...prevMessages, newMessageReceived] : [newMessageReceived]
-      );
-    });
-
-    return () => {
-      socket.off("message received");
-      socket.emit("leave chat", friend._id); 
-    };
-  }, [friend, newMessage]);
+  }, [friend]);
 
   return (
     <Box sx={{ height: "100vh", width: "100%" }}>
@@ -120,7 +109,7 @@ const UserChat = ({ friend }) => {
 
           <Message messages={messages} />
 
-            <Box sx={{ zIndex: 1005, }}>
+          <Box sx={{ zIndex: 1005 }}>
             <Box
               sx={{
                 bottom: isNonMobileScreens ? 20 : 70,
@@ -162,7 +151,7 @@ const UserChat = ({ friend }) => {
                 </IconButton>
               </Box>
             </Box>
-            </Box>
+          </Box>
         </Box>
       )}
     </Box>
